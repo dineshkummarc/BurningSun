@@ -18,14 +18,15 @@ Isometric.Box = atom.Class(
     /** @property {number} */
     speed: 200,
 
-    size: 3,
+    size: [1,1,1],
 
     /**
      * @constructs
      * @param {Isometric.Point3D} coordinates
      * @param map
      */
-    initialize: function (coordinates, map) {
+    initialize: function (coordinates, map, size) {
+        this.size = Isometric.Point3D(size);
         this.coords = Isometric.Point3D( coordinates );
         this.map    = map;
         this.currentShift = new Point(0, 0);
@@ -40,21 +41,21 @@ Isometric.Box = atom.Class(
         var c = this.coords, s = {
             left: [
                 [c.x, c.y, c.z  ],
-                [c.x, c.y, c.z+this.size],
-                [c.x, c.y+this.size, c.z+this.size],
-                [c.x, c.y+this.size, c.z  ]
+                [c.x, c.y, c.z+this.size.z],
+                [c.x, c.y+this.size.y, c.z+this.size.z],
+                [c.x, c.y+this.size.y, c.z  ]
             ],
             right: [
-                [c.x, c.y+this.size, c.z+this.size],
-                [c.x, c.y+this.size, c.z  ],
-                [c.x+this.size, c.y+this.size, c.z  ],
-                [c.x+this.size, c.y+this.size, c.z+this.size]
+                [c.x, c.y+this.size.y, c.z+this.size.z],
+                [c.x, c.y+this.size.y, c.z  ],
+                [c.x+this.size.x, c.y+this.size.y, c.z  ],
+                [c.x+this.size.x, c.y+this.size.y, c.z+this.size.z]
             ],
             top: [
-                [c.x, c.y, c.z+this.size],
-                [c.x, c.y+this.size, c.z+this.size],
-                [c.x+this.size, c.y+this.size, c.z+this.size],
-                [c.x+this.size, c.y, c.z+this.size]
+                [c.x, c.y, c.z+this.size.z],
+                [c.x, c.y+this.size.y, c.z+this.size.z],
+                [c.x+this.size.x, c.y+this.size.y, c.z+this.size.z],
+                [c.x+this.size.x, c.y, c.z+this.size.z]
             ]
         };
 
@@ -131,7 +132,7 @@ Isometric.Box = atom.Class(
     draw: function () {
         var
             c = this.coords,
-            z  = c.z + this.size,
+            z  = c.z + this.size.z,
             zP = this.map.toIsometric([0,0,z]).y,
             s  = this.shapes,
             stroke = 'rgba(0,32,0,0.5)',
@@ -142,15 +143,16 @@ Isometric.Box = atom.Class(
 
         var text = c.x + ' ' + c.y;
 
+        this.showProection();
         if(this.map.sun.shining) {
-            this.drawShadow( this.map.sun.coords, stroke );
+            this.drawShadow( stroke );
         }
         this.libcanvas.ctx
             .save()
 //            .set({
 //                shadowColor  : 'black',
-//                shadowOffsetX: -24 * this.size,
-//                shadowOffsetY: 24 * this.size,
+//                shadowOffsetX: -24 * this.size.x,
+//                shadowOffsetY: 24 * this.size.y,
 //                shadowBlur   : z * 3
 //            })
             .text({
@@ -169,82 +171,125 @@ Isometric.Box = atom.Class(
             .stroke( s.right, stroke );
         return this;
     },
+    
+    showProection: function() {
+        var c = this.coords;
+        var coords = [
+            [c.x, c.y, 0],
+            [c.x+this.size.x, c.y, 0],
+            [c.x+this.size.x, c.y+this.size.y, 0],
+            [c.x, c.y+this.size.y, 0]
+        ];
+        var polygon = new Polygon( coords.map( this.map.toIsometric ) ).move( this.currentShift );
+        this.libcanvas.ctx.stroke( polygon, 'rgba(200,150,150,0.5)' );
+    },
 
-    drawShadow: function(lightCoords, color) {
-        var
-            c = this.coords,
-            z  = c.z + this.size
+    drawShadow: function(color) {
+        var debug = false;
+        var c = this.coords;
+        var sc = this.map.sun.coords,
+            sunPoints = {
+                        x:[
+                                new Point(sc.x, sc.z),
+                                new Point(sc.x+this.map.sun.size.x, sc.z)
+                            ],
+                        y:[
+                                new Point(sc.y, sc.z),
+                                new Point(sc.y+this.map.sun.size.y, sc.z)
+                            ]
+            };
 
-        var lightX = new Point(lightCoords.x, lightCoords.z);
-        var lightY = new Point(lightCoords.y, lightCoords.z);
-        var boxX = [new Point(c.x, z), new Point(c.x+this.size, z)];
-        var boxY = [new Point(c.y, z), new Point(c.y+this.size, z)];
-        var sunAngleX = [
-            lightX.angleTo(boxX[0]),
-            lightX.angleTo(boxX[1])
+        var points = [
+            [c.x, c.y, c.z],
+            [c.x, c.y+this.size.y, c.z],
+            [c.x+this.size.x, c.y+this.size.y, c.z],
+            [c.x+this.size.x, c.y, c.z],
+            [c.x, c.y, c.z+this.size.z],
+            [c.x, c.y+this.size.y, c.z+this.size.z],
+            [c.x+this.size.x, c.y+this.size.y, c.z+this.size.z],
+            [c.x+this.size.x, c.y, c.z+this.size.z]
         ];
-        var sunAngleY = [
-            lightY.angleTo(boxY[0]),
-            lightY.angleTo(boxY[1])
-        ];
-        var offsetX = [
-            Math.abs(this.size/Math.tan(sunAngleX[0])),
-            Math.abs(this.size/Math.tan(sunAngleX[1]))
-        ];
-        var offsetY =[
-            Math.abs(this.size/Math.tan(sunAngleY[0])),
-            Math.abs(this.size/Math.tan(sunAngleY[1]))
-        ];
-        var shadowCoords = [];
-        var text = this.map.projection.factor.x;
-        var xFactor = this.map.projection.factor.x*this.size;
-        var yFactor = this.map.projection.factor.y*this.size;
-        if(lightCoords.x>c.x && lightCoords.y<c.y) {
-            shadowCoords = [
-                [c.x, c.y, c.z],
-                [c.x, c.y+this.size, c.z],
-                [c.x+this.size, c.y+this.size, c.z],
-                [c.x-offsetX[1]+xFactor, c.y+offsetY[1], c.z],
-                [c.x-offsetX[0]+xFactor, c.y+offsetY[1], c.z],
-                [c.x-offsetX[0]+xFactor, c.y+offsetY[0], c.z]
-            ];
-        } else if(lightCoords.x>c.x && lightCoords.y>c.y) {
-            shadowCoords = [
-                [c.x+this.size, c.y, c.z],
-                [c.x, c.y, c.z],
-                [c.x, c.y+this.size, c.z],
-                [c.x-offsetX[0], c.y-offsetY[1], c.z],
-                [c.x-offsetX[0], c.y-offsetY[0], c.z],
-                [c.x-offsetX[1], c.y-offsetY[0], c.z]
-            ];
-        } else if(lightCoords.x<c.x && lightCoords.y>c.y) {
-            shadowCoords = [
-                [c.x, c.y, c.z],
-                [c.x+this.size, c.y, c.z],
-                [c.x+this.size, c.y+this.size, c.z],
-                [c.x+offsetX[1]+xFactor, c.y-offsetY[1], c.z],
-                [c.x+offsetX[1]+xFactor, c.y-offsetY[0], c.z],
-                [c.x+offsetX[0]+xFactor, c.y-offsetY[0], c.z]
-            ];
-        } else if(lightCoords.x<c.x && lightCoords.y<c.y) {
-            shadowCoords = [
-                [c.x+this.size, c.y, c.z],
-                [c.x+this.size, c.y+this.size, c.z],
-                [c.x, c.y+this.size, c.z],
-                [c.x+offsetX[0], c.y+offsetY[1], c.z],
-                [c.x+offsetX[1], c.y+offsetY[1], c.z],
-                [c.x+offsetX[1], c.y+offsetY[0], c.z]
-            ];
+
+        var shadowPoints = [];
+        var cathetusPow = [];
+        var text = '';
+        for(var i=0;i<8;i++) {
+            var
+                pointX = new Point(points[i][0], points[i][2]),
+                pointY = new Point(points[i][1], points[i][2]),
+                lightX = Math.abs(sunPoints.x[0].x-pointX.x)<Math.abs(sunPoints.x[1].x-pointX.x) ? sunPoints.x[0] : sunPoints.x[1],
+                lightY = Math.abs(sunPoints.y[0].x-pointY.x)<Math.abs(sunPoints.y[1].x-pointY.x) ? sunPoints.y[0] : sunPoints.y[1];
+            cathetusPow.push( Math.pow(lightX.x-pointX.x, 2) + Math.pow(lightY.x-pointY.x, 2) - pointX.y );
+
+            if(debug) {
+                var poly = new Polygon(this.map.toIsometric(points[i]), this.map.toIsometric([lightX.x, lightY.x, sc.z])).move( this.currentShift );
+                this.libcanvas.ctx.stroke(poly, 'rgba(200,200,150,0.5)');
+            }
+
+            var offsetX = Math.abs( points[i][2] / Math.tan( lightX.angleTo(pointX) ) );
+            var offsetY = Math.abs( points[i][2] / Math.tan( lightY.angleTo(pointY) ) );
+            var modX = lightX.x>points[i][0]?-1:1;
+            var modY = lightY.x>points[i][1]?-1:1;
+            shadowPoints[i] = [points[i][0]+(modX*offsetX), points[i][1]+(modY*offsetY), 0];
         }
-        var shadow = new Polygon( shadowCoords.map( this.map.toIsometric ) ).move( this.currentShift );
 
-        this.libcanvas.ctx
-            .text({
-                text: text,
-                size: 32,
-                padding: [40, 70],
-                color: 'white',
-                align: 'right'
-            }).fill(shadow, color);
+        var minLight = [0],
+            maxLight = [0];
+
+        for(var i=1;i<8;i++) {
+            if(cathetusPow[i]<=cathetusPow[minLight[0]]) {
+                if(cathetusPow[i]==cathetusPow[minLight[0]]) {
+                    minLight.push(i);
+                } else {
+                    minLight = [i];
+                }
+            } else if(cathetusPow[i]>=cathetusPow[maxLight[0]]) {
+                if(cathetusPow[i]==cathetusPow[maxLight[0]]) {
+                    maxLight.push(i);
+                } else {
+                    maxLight = [i];
+                }
+            }
+        }
+        for(var i=0;i<minLight.length;i++) {
+            text += minLight[i] + ' ';
+            shadowPoints[minLight[i]] = false;
+        }
+        for(var i=0;i<maxLight.length;i++) {
+            text += maxLight[i] + ' ';
+            shadowPoints[maxLight[i]] = false;
+        }
+
+        var topIzo = [];
+        if(c.y<sc.y) {
+            if(shadowPoints[4]) topIzo.push(this.map.toIsometric(shadowPoints[4]));
+            if(shadowPoints[5]) topIzo.push(this.map.toIsometric(shadowPoints[5]));
+            if(shadowPoints[0]) topIzo.push(this.map.toIsometric(shadowPoints[0]));
+            if(shadowPoints[1]) topIzo.push(this.map.toIsometric(shadowPoints[1]));
+            if(shadowPoints[2]) topIzo.push(this.map.toIsometric(shadowPoints[2]));
+            if(shadowPoints[3]) topIzo.push(this.map.toIsometric(shadowPoints[3]));
+            if(shadowPoints[6]) topIzo.push(this.map.toIsometric(shadowPoints[6]));
+            if(shadowPoints[7]) topIzo.push(this.map.toIsometric(shadowPoints[7]));
+        } else {
+            if(shadowPoints[0]) topIzo.push(this.map.toIsometric(shadowPoints[0]));
+            if(shadowPoints[1]) topIzo.push(this.map.toIsometric(shadowPoints[1]));
+            if(shadowPoints[4]) topIzo.push(this.map.toIsometric(shadowPoints[4]));
+            if(shadowPoints[5]) topIzo.push(this.map.toIsometric(shadowPoints[5]));
+            if(shadowPoints[6]) topIzo.push(this.map.toIsometric(shadowPoints[6]));
+            if(shadowPoints[7]) topIzo.push(this.map.toIsometric(shadowPoints[7]));
+            if(shadowPoints[2]) topIzo.push(this.map.toIsometric(shadowPoints[2]));
+            if(shadowPoints[3]) topIzo.push(this.map.toIsometric(shadowPoints[3]));
+        }
+        var poly = new Polygon(topIzo).move( this.currentShift );
+        this.libcanvas.ctx.fill(poly,color);
+
+        if(debug) {
+            for(var i=0;i<8;i++) {
+                if(shadowPoints[i]) {
+                    var poly = new Polygon(this.map.toIsometric(points[i]), this.map.toIsometric(shadowPoints[i])).move( this.currentShift );
+                    this.libcanvas.ctx.stroke(poly,color);
+                }
+            }
+        }
     }
 });

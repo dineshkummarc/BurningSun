@@ -11,7 +11,18 @@ Isometric.Controller = atom.Class(
         },
         box: {
             coords: new Isometric.Point3D( 16, 16, 0.12 ),
-            colors: [ '#eaa', '#a66', '#733' ]
+            colors: [ '#eaa', '#a66', '#733' ],
+            size: [ 3,3,3 ]
+        },
+        box2: {
+            coords: new Isometric.Point3D( Number.random(1,15), Number.random(1,15), 0.02 ),
+            colors: [ '#eaa', '#a66', '#733' ],
+            size: [ Number.random(1,5),Number.random(1,5),Number.random(1,5) ]
+        },
+        box4: {
+            coords: new Isometric.Point3D( Number.random(15,25), Number.random(15,25), 0.02 ),
+            colors: [ '#eaa', '#a66', '#733' ],
+            size: [ Number.random(1,5),Number.random(1,5),Number.random(1,5) ]
         }
     },
 
@@ -40,14 +51,18 @@ Isometric.Controller = atom.Class(
 
         var sun  = this.createSun( {
             coords: new Isometric.Point3D( this.self.map.size.x/2, 0, 0 ), colors: [ '#ffc', '#ffc', '#ffc' ]
-        }, 10 );
+        }, 10, [3,3,3] );
 
         this.map.setSun( sun );
         var box  = this.createBox( this.self.box );
+        var box2  = this.createBox( this.self.box2 );
+        var box4  = this.createBox( this.self.box4 );
         this.addMouseControls( box );
         this.addKeyboardControls( box );
         this.libcanvas
                 .addElement( box )
+                .addElement( box2 )
+                .addElement( box4 )
                 .addElement( sun )
                 .fpsMeter()
                 .addFunc(
@@ -56,6 +71,7 @@ Isometric.Controller = atom.Class(
                     }
                 )
                 .update();
+//        sun.move(1);
     },
 
     /**
@@ -63,10 +79,10 @@ Isometric.Controller = atom.Class(
      * @param {Isometric.Point3D} coord
      * @returns {Isometric.Box}
      */
-    createGhost: function (coord) {
+    createGhost: function (coord, size) {
         var
             color = 'rgba(200,240,255,0.3)',
-            box   = this.map.box( coord );
+            box   = this.map.box( coord, size );
         box.colors = [color, color, color];
         this.libcanvas.addElement( box ).update();
         return this.ghost = box;
@@ -96,7 +112,7 @@ Isometric.Controller = atom.Class(
 
                 if (!newCoord) return;
                 newCoord.z = elem.coords.z;
-                this.removeGhost().createGhost( newCoord );
+                this.removeGhost().createGhost( newCoord, this.self.box.size );
                 elem.move(
                     elem.coords.diff( this.ghost.coords ),
                     elem.libcanvas.update,
@@ -155,7 +171,7 @@ Isometric.Controller = atom.Class(
      * @returns {Isometric.Box}
      */
     createBox: function (boxCfg) {
-        var box  = this.map.box( boxCfg.coords );
+        var box  = this.map.box( boxCfg.coords, boxCfg.size );
         if (boxCfg.colors) box.colors = boxCfg.colors;
         return box;
     },
@@ -164,8 +180,8 @@ Isometric.Controller = atom.Class(
      * @param {Object} sunCfg
      * @returns {Isometric.Sun}
      */
-    createSun: function (sunCfg, zIndex) {
-        var sun  = this.map.sun( sunCfg.coords ).setZIndex( zIndex );
+    createSun: function (sunCfg, zIndex, sunSize) {
+        var sun  = this.map.sun( sunCfg.coords, sunSize ).setZIndex( zIndex );
         if (sunCfg.colors) sun.colors = sunCfg.colors;
         return sun;
     },

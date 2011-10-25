@@ -91,8 +91,8 @@ Isometric.Map = atom.Class(
      * @param {Isometric.Point3D} coords
      * @returns {Isometric.Box}
      */
-    box: function (coords, sun) {
-        var box = new Isometric.Box( coords, this );
+    box: function (coords, size) {
+        var box = new Isometric.Box( coords, this, size );
         this.elements.push( box );
         return box.shift( this.currentShift );
     },
@@ -100,8 +100,8 @@ Isometric.Map = atom.Class(
      * @param {Isometric.Point3D} coords
      * @returns {Isometric.Sun}
      */
-    sun: function (coords) {
-        var sun = new Isometric.Sun( coords, this );
+    sun: function (coords, size) {
+        var sun = new Isometric.Sun( coords, this, size );
         this.elements.push( sun );
         return sun.shift( this.currentShift );
     },
